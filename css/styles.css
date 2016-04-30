@@ -14,7 +14,7 @@ and then style them as shown in the example (padding, margin, background, etc)
 */
 .item-watchlist {
 	display: inline-block;
-	padding: 58px;
+	padding: 60px;
 	margin-right: 10px;
 	margin-bottom: 10px;
 	background-color: orange;
@@ -22,11 +22,15 @@ and then style them as shown in the example (padding, margin, background, etc)
 }
 
 /*
-TODO 6
+TODO 7 (DONE)
 apply some styles to the buttons, both the "Add to Watchlist" buttons 
 and the "Search by Title" submit button
 */
-
+button, input[type="submit"] {
+	background-color: orange;
+	color: white;
+	padding: 10px;
+}
 
 /*
 TODO 5 (DONE) 
@@ -66,13 +70,18 @@ ul {
 	padding-left: 0px;
 }
 
+/*
+TODO 9
+give these buttons some padding, and color them orange with white text
+*/
 button, input[type="submit"] {
 	border-width: 0px;
-	/*
-	TODO 9
-	give these buttons some padding, and color them orange with white text
-	*/
+	background-color: orange;
+	color: white;
+	padding: 10px;
 }
+
+
 
 button:disabled {
 	opacity: 0.5;

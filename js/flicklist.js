@@ -44,9 +44,19 @@ function discoverMovies(callback) {
  * if successful, updates model.browseItems appropriately and then invokes
  * the callback function that was passed in
  */
-function searchMovies(query, callback) {
+function searchMovies(searchTerm, callback) {
   // TODO 8
-
+  $.ajax({
+    url: api.root + "/search/movie",
+    data: {
+      api_key: api.token,
+      query: searchTerm
+    },
+    success: function(response) {
+      model.browseItems = response.results;
+      callback();
+    }
+  });
 }
 
 
@@ -79,22 +89,16 @@ function render() {
       .click(function() {
         model.watchlistItems.push(movie);
         render();
-      });
-      
-      // TODO 2 ???
+      })
+     
+      // TODO 2 (DONE)
       // the button should be disabled if this movie is already in
       // the user's watchlist
       // see jQuery .prop() and Array.indexOf()
-      var onWatchList = model.watchlistItems.indexOf(movie.original_title);
-      if (onWatchList === -1) {
-        buttonTag =  $("#section-browse button").filter(onWatchList);
-        console.log(buttonTag);
-        buttonTag.prop("disabled", true);
-        
-      }
-
-
+      .prop("disabled", model.watchlistItems.indexOf(movie) !== -1);
+      
     // TODO 1 (DONE)
+    
     // create a paragraph containing the movie object's .overview value
     // then, in the code block below,
     // append the paragraph in between the title and the button
