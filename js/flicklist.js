@@ -2,76 +2,85 @@
 
 var model = {
   watchlistItems: [],
-  browseItems: []
+  browseItems: [],
 
-  // TODO 
+  // TODO (DONE)
   // add a property for the current active movie index
-}
+  browseActiveIndex: 0
+};
 
 
 var api = {
   root: "https://api.themoviedb.org/3",
-  token: "8e888fa39ec243e662e1fb738c42ae99", // TODO 0 add your api key
-  /**
-   * Given a movie object, returns the url to its poster image
-   */
-  posterUrl: function(movie) {
-    var baseImageUrl = "http://image.tmdb.org/t/p/w300/";
-    return baseImageUrl + movie.poster_path; 
-  }
-}
+  token: "fdf2b6c2fd8bfe40d47c7080b3abac7c", // TODO 0 (DONE) add your api key
+  imageBaseUrl: "http://image.tmdb.org/t/p/"
+};
 
 
 
 /**
- * Makes an AJAX request to themoviedb.org, asking for some movies
+ * Makes an AJAX request to the /discover endpoint of the API, using the 
+ * keyword ID that was passed in
  *
- * if successful, updates the model.browseItems appropriately, and then invokes
+ * if successful, updates model.browseItems appropriately and then invokes
  * the callback function that was passed in
  */
-
-function discoverMovies(callback, keywords) {
-
+function discoverMovies(data, callback) {
+  //  
   $.ajax({
     url: api.root + "/discover/movie",
-    data: {
-      api_key: api.token,
-      with_keywords: keywords
-    },
+    data: data,
     success: function(response) {
       model.browseItems = response.results;
       callback(response);
+    },
+    fail: function() {
+      console.log("discover failed");
     }
   });
 }
 
 
+function searchMovies(query, callback) {
+  fetchKeywords(
+    query, 
+    function(keywordsResponse) {
+      console.log("fetch succeeded");
+      var firstKeywordID = keywordsResponse.results[0].id;
+      var data = {
+        api_key: api.token,
+        with_keywords: firstKeywordID
+      };
+      discoverMovies(data, callback);
+    },
+    function() {
+      console.log("fetchkeywords failed");
+      var data = {
+        api_key: api.token
+      };
+      discoverMovies(data, callback);
+    }
+  );
+}
+
+
 /**
- * Makes an AJAX request to the /search/keywords endpoint of the API, using the 
- * query string that was passed in
+ * Makes an AJAX request to the /search/keyword endpoint of the API,
+ * using the query string that was passed in
  *
  * if successful, invokes the supplied callback function, passing in
  * the API's response.
  */
-function searchMovies(query, callback) {
-
+function fetchKeywords(query, cbSuccess, cbError) {
+  // DONE
   $.ajax({
     url: api.root + "/search/keyword",
     data: {
       api_key: api.token,
       query: query
     },
-    success: function(response) {
-      console.log(response);
-    
-      var keywordIDs = response.results.map(function(keywordObj) {
-        return keywordObj.id;
-      });
-      var keywordsString = keywordIDs.join("|");
-      console.log(keywordsString);
-      
-      discoverMovies(callback, keywordsString);
-    }
+    success: cbSuccess,
+    error: cbError
   });
 }
 
@@ -80,75 +89,112 @@ function searchMovies(query, callback) {
  * re-renders the page with new content, based on the current state of the model
  */
 function render() {
+  var watchlistElement = $("#section-watchlist ul");
+  var carouselInner = $("#section-browse .carousel-inner");
+  var browseInfo = $("#browse-info");
 
   // clear everything
-  $("#section-watchlist ul").empty();
-  $("#section-browse ul").empty();
+  watchlistElement.empty();
+  carouselInner.empty();
+  browseInfo.empty();
 
-  // render watchlist items
+  // insert watchlist items
   model.watchlistItems.forEach(function(movie) {
-    var title = $("<h6></h6>").text(movie.original_title);
-      
-    // movie poster
-    var poster = $("<img></img>")
-      .attr("src", api.posterUrl(movie))
-      .attr("class", "img-responsive");
 
-    // "I watched it" button
+    // panel heading
+    var title = $("<h5></h5>").text(movie.original_title);  
+    var panelHeading = $("<div></div>")
+      .attr("class", "panel-heading")
+      .append(title);
+
+    // panel body
+    var poster = $("<img></img>")
+      .attr("src", posterUrl(movie, "w300"));
+      
+    var panelBody = $("<div></div>")
+      .attr("class", "panel-body")
+      .append(poster)
+      .append(button);
+
+    // panel
+    var panel = $("<div></div>")
+      .attr("class", "panel panel-default")
+      .append(panelHeading)
+      .append(panelBody);
+
+
     var button = $("<button></button>")
       .text("I watched it")
       .attr("class", "btn btn-danger")
       .click(function() {
-        var index = model.watchlistItems.indexOf(movie);
-        model.watchlistItems.splice(index, 1);
+        removeFromWatchlist(movie);
         render();
       });
-
-    // panel heading contains the title
-    var panelHeading = $("<div></div>")
-      .attr("class", "panel-heading")
-      .append(title);
-    
-    // panel body contains the poster and button
-    var panelBody = $("<div></div>")
-      .attr("class", "panel-body")
-      .append( [poster, button] );
-
-    // list item is a panel, contains the panel heading and body
-    var itemView = $("<li></li>")
-      .append( [panelHeading, panelBody] )
-      .attr("class", "panel panel-default");
-
-    $("#section-watchlist ul").append(itemView);
-  });
-
-  // render browse items
-  model.browseItems.forEach(function(movie) {
-    var title = $("<h4></h4>").text(movie.original_title);
-    var overview = $("<p></p>").text(movie.overview);
-
-    // button for adding to watchlist
-    var button = $("<button></button>")
-      .text("Add to Watchlist")
-      .attr("class", "btn btn-primary")
-      .click(function() {
-        model.watchlistItems.push(movie);
-        render();
-      })
-      .prop("disabled", model.watchlistItems.indexOf(movie) !== -1);
-
-    var itemView = $("<li></li>")
-      .attr("class", "list-group-item")
-      .append( [title, overview, button] );
       
-    // append the itemView to the list
-    $("#section-browse ul").append(itemView);
+
+    var itemView = $("<li></li>")
+      .append(panel)
+      .append(button);
+      
+    watchlistElement.append(itemView);
   });
+
+  // insert browse items
+  model.browseItems.forEach(function(movie, index) {
+    // replace the old ul code with new carousel implementation:
+    // create an image with the movie poster
+    // wrap the image inside a div
+    // append the item into the carousel-inner element
+
+    var poster = $("<img></img>")
+      .attr("src", posterUrl(movie, "w300"));
+    var carouselItem = $("<div></div>")
+      .attr("class", "item")
+      .append(poster);
+    
+    carouselInner.append(carouselItem);
+
+    // if this index is the current active index,
+    // give this item a class attribute of "active"
+    if (index === model.browseActiveIndex) {
+      carouselItem.attr("class", "item active");
+    }
+  });
+
+  // display info for the currently active movie
+  var activeMovie = model.browseItems[model.browseActiveIndex];
+  var title = $("<h3></h3>").text(activeMovie.original_title);
+  var overview = $("<p></p>").text(activeMovie.overview);
+  browseInfo
+    .append(title)
+    .append($("<hr/>"))
+    .append(overview);
+  
+  // disable or enable the Add to Watchlist button depending on
+  // whether the current active movie is already on the user's watchlist
+  var alreadyOnWatchlist = model.watchlistItems.indexOf(activeMovie) !== -1;
+  $("#add-to-watchlist").prop("disabled", alreadyOnWatchlist);
 }
 
 
-// When the HTML document is ready, we call the discoverMovies function,
-// and pass the render function as its callback
-$(document).ready(function() {
-  discoverMovies(render);
-});
+function posterUrl(movie, width) {
+  return api.imageBaseUrl + width + "/" + movie.poster_path;
+}
+
+
+/**
+ * removes the given movie from model.watchlistItems
+ */
+function removeFromWatchlist(movie) {
+  model.watchlistItems = model.watchlistItems.filter(function(item) {
+    return item !== movie;
+  });
+}
+
+/**
+ * adds the given movie to model.watchlistItems
+ */
+function addActiveMovie() {
+  var activeMovie = model.browseItems[model.browseActiveIndex];
+  model.watchlistItems.push(activeMovie);
+}
